@@ -2,17 +2,18 @@
 Toy oscillation analysis
 
 This is DeepCore-like, but only in 1D (reco energy)
-
-Tom Stuttard
 """
 
 import os, sys
+import numpy as np
 
-from utils.plotting.standard_modules import *
+# from utils.plotting.standard_modules import *
 
-from analysis.sandbox.atrettin.osc_analysis.simple_analysis import (
+from simple_analysis import (
     AnalysisBase,
     AnalysisParam,
+    get_bins,
+    Histogram,
 )
 
 
@@ -141,8 +142,8 @@ class ToyOscAnalysis(AnalysisBase):
 
 if __name__ == "__main__":
 
-    from utils.script_tools import ScriptWrapper
-    from utils.filesys_tools import replace_file_ext
+    # from utils.script_tools import ScriptWrapper
+    # from utils.filesys_tools import replace_file_ext
 
     with ScriptWrapper(replace_file_ext(__file__, ".log")) as script:
 

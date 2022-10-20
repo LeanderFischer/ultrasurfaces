@@ -16,8 +16,8 @@ from sklearn.linear_model import TheilSenRegressor
 
 from scipy.stats import lognorm, truncnorm
 
-from analysis.sandbox.atrettin.osc_analysis.simple_analysis import AnalysisParam
-from analysis.sandbox.atrettin.osc_analysis.toy_osc_analysis import ToyOscAnalysis
+from simple_analysis import AnalysisParam
+from toy_osc_analysis import ToyOscAnalysis
 
 
 class ToyOscAnalysisUltrasurf(ToyOscAnalysis):
