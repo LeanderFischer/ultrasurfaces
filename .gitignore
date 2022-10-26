@@ -3,6 +3,12 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Mac Nonsense
+.DS_STORE
+
+# BBEDIT project
+*.bbprojectd
+
 # C extensions
 *.so
 
