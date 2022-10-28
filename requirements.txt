@@ -2,3 +2,4 @@ jupyter
 notebook
 scipy
 numpy
+matplotlib
