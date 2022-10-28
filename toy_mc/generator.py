@@ -24,8 +24,22 @@ class Response(NamedTuple):
     sigma: float
 
 
+class OscPars(NamedTuple):
+    """
+    parameters for 2 flavor oscillation
+    """
+    delta_mqs: float
+    sinsq_2theta: float
+
+
 class Generator():
-    def __init__(self, n_events: int, index: float, response: Response) -> None:
+    def __init__(
+        self,
+        n_events: int,
+        index: float,
+        response: Response,
+        pars: OscPars = None
+    ) -> None:
         """
         Toy MC generator, sampling events from a power law neutrino energy
         distribution, applying two-flavor oscillation probabilities and
@@ -39,6 +53,9 @@ class Generator():
             spectral index \gamma of power law, dN/dE \propto E^{-\gamma}
         response : Response
             simplified detector response: \mu and \sigma of a lognormal pdf
+        pars : OscPars
+            Parameters for 2-flavor osciallation, by default None so that
+            default values are used
         """
 
         # define anchor of powerlaw
@@ -50,12 +67,16 @@ class Generator():
         }
         self.__generation(n_events, index)
 
-        self.__apply_oscillation()
+        self.__apply_oscillation(pars)
 
         self.__apply_detector_response(response)
 
     def get_events(self) -> dict:
         return self.__events
+
+    def reweight_oscillation(self, pars: OscPars):
+
+        self.__apply_oscillation(pars)
 
     def __generation(self, n_events: int, index: float) -> None:
         """
@@ -81,50 +102,55 @@ class Generator():
         print(f"Generating events between {emin} GeV and {emax} GeV" + \
             f" and cos(zenith) values between {czmin} and {czmax}")
 
-        weights = np.ones_like(cos_zens)
-
         self.__events = {
             'true_energy': energies,
             'true_cos(zen)': cos_zens,
-            'weights': weights,
+            'weights': np.ones_like(cos_zens),
+            'survival_prob': np.ones_like(cos_zens)  # start without oscialltion weight
         }
 
-    def __apply_oscillation(self) -> None:
+    def __apply_oscillation(self, pars: OscPars = None) -> None:
         # get survival properties
+
+        if pars is None:
+            # use atmospheric neutrino osciallation quantities, Fig. 3.6 in Andrii
+            # Terliuk's thesis
+            delta_msq_31 = 2.515e-3
+            sinsq_theta_23 = 0.565
+            # convert this to sin**2(2 \theta)
+            theta_23 = np.arcsin(np.sqrt(sinsq_theta_23))
+            sinsq_2theta_23 = np.sin(2 * theta_23)**2
+            self.__osc_pars = OscPars(delta_msq_31, sinsq_2theta_23)
+        else:
+            self.__osc_pars = pars
 
         lengths = get_length_travelled(
             np.arccos(self.__events['true_cos(zen)'])
         )
 
-        # use atmospheric neutrino osciallation quantities, Fig. 3.6 in Andrii
-        # Terliuk's thesis
-        delta_msq_31 = 2.515e-3
-        sinsq_theta_23 = 0.565
-        # convert this to sin**2(2 \theta)
-        theta_23 = np.arcsin(np.sqrt(sinsq_theta_23))
-        sinsq_2theta_23 = np.sin(2 * theta_23)**2
-        prop = survival_probability(
-            lengths, self.__events['true_energy'], delta_msq_31, sinsq_2theta_23
+        prob = survival_probability(
+            lengths, self.__events['true_energy'],
+            self.__osc_pars.delta_mqs, self.__osc_pars.sinsq_2theta
         )
 
-        def survival_prob_used(lengths, energies):
-            return survival_probability(
-                lengths, energies, delta_msq_31, sinsq_2theta_23
-            )
+        # re-weight events:
+        # if oscillation weights were applied previously divide this out
+        # otherwise self.__events['survival_prob'] is just 1.
+        reweight = prob / np.copy(self.__events['survival_prob'])
 
-        # cache callable for crosschecks
-        self.survival_prob = survival_prob_used
-
-        self.__events['survival_prop'] = prop
+        # store current survival probabilities
+        self.__events['survival_prob'] = prob
 
         # apply this factor to the event's weights
-        print(
-            f"sum of weights generated: {np.sum(self.__events['weights']):.2f}"
-        )
-        self.__events['weights'] *= prop
-        print(
-            f"  sum of weights oscillated: {np.sum(self.__events['weights']):.2f}"
-        )
+        self.__events['weights'] *= reweight
+
+        # "cache" callable for crosschecks
+        def survival_prob_used(lengths, energies):
+            return survival_probability(
+                lengths, energies, self.__osc_pars.delta_mqs,
+                self.__osc_pars.sinsq_2theta
+            )
+        self.survival_prob = survival_prob_used
 
     def __apply_detector_response(self, response: Response) -> None:
         """
