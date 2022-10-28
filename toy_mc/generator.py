@@ -46,7 +46,7 @@ class Generator():
         # define sample boundaries
         self.__boundaries = {
             "energy": [1., 1000],
-            "cos(zen)": [-1., 0.],  # only analyze 'upgoing' events?
+            "cos(zen)": [-1., -1.],  # fixed baseline
         }
         self.__generation(n_events, index)
 
