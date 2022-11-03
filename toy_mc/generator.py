@@ -74,6 +74,31 @@ class Generator():
     def get_events(self) -> dict:
         return self.__events
 
+    def get_histogram(self, bin_edges) -> dict:
+        """
+        Get histogram for a certain binning in reconstructed energy
+
+        Parameters
+        ----------
+        bin_edges : 'np.ndarray[np.float64]'
+            bin edges of the histogram
+
+        Returns
+        -------
+        dict
+            histogram (sum(weights) per bin)
+            and statistical uncertainties (sqrt(sum(weights**2)) per bin)
+        """
+
+        idx = np.digitize(self.__events['reco_energy'], bin_edges)
+
+        hist = np.bincount(idx, weights=self.__events['weights'])
+        hist_unc = np.sqrt(
+            np.bincount(idx, weights=np.power(self.__events['weights'], 2))
+        )
+
+        return {"hist": hist, "hist_unc": hist_unc}
+
     def reweight_oscillation(self, pars: OscPars):
 
         self.__apply_oscillation(pars)
