@@ -219,12 +219,7 @@ class Generator():
             loc=old_response.mu
         )
 
-        self.__events['weights'] *= reweight * self.__smearing
-
-        self.__smearing = reweight * self.__smearing
-
-        # finally, overwrite response for bookkeeping
-        self.__detector_response = response
+        self.__events['weights'] *= reweight
 
 
 def survival_probability(
