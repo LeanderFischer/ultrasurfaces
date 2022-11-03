@@ -6,6 +6,7 @@ simulates a detector response.
 
 from typing import NamedTuple
 import numpy as np
+from scipy.stats import lognorm
 
 import logging
 
@@ -103,6 +104,10 @@ class Generator():
 
         self.__apply_oscillation(pars)
 
+    def reweight_detector_response(self, response: Response):
+
+        self.__recalculate_response(response)
+
     def __generation(self, n_events: int, index: float) -> None:
         """
         Generates events, following a power law with index index in energy
@@ -118,6 +123,8 @@ class Generator():
 
         self.__n_events = n_events
 
+        # TODO: seed the random generator properly for reproducibility?
+
         emin, emax = self.__boundaries['energy']
         energies = sample_powerlaw(n_events, emin, emax, index)
 
@@ -127,11 +134,12 @@ class Generator():
         print(f"Generating events between {emin} GeV and {emax} GeV" + \
             f" and cos(zenith) values between {czmin} and {czmax}")
 
+        # start with equal weights and without oscillation weight
         self.__events = {
             'true_energy': energies,
             'true_cos(zen)': cos_zens,
             'weights': np.ones_like(cos_zens),
-            'survival_prob': np.ones_like(cos_zens)  # start without oscialltion weight
+            'survival_prob': np.ones_like(cos_zens)
         }
 
     def __apply_oscillation(self, pars: OscPars = None) -> None:
@@ -188,11 +196,35 @@ class Generator():
             simplified detector response: \mu and \sigma of a lognormal pdf
         """
 
+        self.__detector_response = response
+
         smearing = np.random.lognormal(
             mean=response.mu, sigma=response.sigma, size=self.__n_events
         )
 
+        self.__smearing = smearing
+
         self.__events['reco_energy'] = self.__events['true_energy'] * smearing
+
+    def __recalculate_response(self, response: Response) -> None:
+        # reweight every event to a new detector response:
+
+        old_response = self.__detector_response
+
+        reweight = lognorm.pdf(
+            self.__smearing, response.sigma, loc=response.mu
+        ) / lognorm.pdf(
+            self.__smearing,
+            old_response.sigma,
+            loc=old_response.mu
+        )
+
+        self.__events['weights'] *= reweight * self.__smearing
+
+        self.__smearing = reweight * self.__smearing
+
+        # finally, overwrite response for bookkeeping
+        self.__detector_response = response
 
 
 def survival_probability(
