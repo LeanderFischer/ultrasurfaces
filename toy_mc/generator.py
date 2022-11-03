@@ -6,7 +6,7 @@ simulates a detector response.
 
 from typing import NamedTuple
 import numpy as np
-from scipy.stats import lognorm
+from scipy.stats import norm
 
 import logging
 
@@ -198,25 +198,27 @@ class Generator():
 
         self.__detector_response = response
 
-        smearing = np.random.lognormal(
-            mean=response.mu, sigma=response.sigma, size=self.__n_events
+        smearing = np.random.normal(
+            loc=response.mu, scale=response.sigma, size=self.__n_events
         )
+        log10_ereco = np.log10(self.__events['true_energy']) * smearing
 
+        self.__events['reco_energy'] = np.power(10, log10_ereco)
+
+        # bookkeep smearing values
         self.__smearing = smearing
-
-        self.__events['reco_energy'] = self.__events['true_energy'] * smearing
 
     def __recalculate_response(self, response: Response) -> None:
         # reweight every event to a new detector response:
 
         old_response = self.__detector_response
 
-        reweight = lognorm.pdf(
-            self.__smearing, response.sigma, loc=response.mu
-        ) / lognorm.pdf(
+        reweight = norm.pdf(
+            self.__smearing, loc=response.mu, scale=response.sigma
+        ) / norm.pdf(
             self.__smearing,
-            old_response.sigma,
-            loc=old_response.mu
+            loc=old_response.mu,
+            scale=old_response.sigma,
         )
 
         self.__events['weights'] *= reweight
