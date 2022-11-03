@@ -126,7 +126,10 @@ class Generator():
         # TODO: seed the random generator properly for reproducibility?
 
         emin, emax = self.__boundaries['energy']
-        energies = sample_powerlaw(n_events, emin, emax, index)
+        # energies = sample_powerlaw(n_events, emin, emax, index)
+
+        logenergies = np.random.normal(loc=1.3, scale=0.5, size=n_events)
+        energies = np.power(10, logenergies)
 
         czmin, czmax = self.__boundaries['cos(zen)']
         cos_zens = np.random.uniform(low=czmin, high=czmax, size=n_events)
