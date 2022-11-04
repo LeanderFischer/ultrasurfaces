@@ -37,9 +37,9 @@ class Generator():
     def __init__(
         self,
         n_events: int,
-        index: float,
         response: Response,
-        pars: OscPars = None
+        pars: OscPars = None,
+        rng_seed: int = None,
     ) -> None:
         """
         Toy MC generator, sampling events from a power law neutrino energy
@@ -50,23 +50,24 @@ class Generator():
         ----------
         n_events : int
             number of events generated
-        index : float
-            spectral index \gamma of power law, dN/dE \propto E^{-\gamma}
         response : Response
             simplified detector response: \mu and \sigma of a lognormal pdf
         pars : OscPars
             Parameters for 2-flavor osciallation, by default None so that
             default values are used
+        rng_seed : int
+            seed for the RNG, can be 
+            {None, int, array_like[ints], SeedSequence, BitGenerator, Generator}
         """
 
-        # define anchor of powerlaw
-        self.__energy_anchor = 1
+        self.__rng = np.random.default_rng(rng_seed)
+
         # define sample boundaries
         self.__boundaries = {
-            "energy": [1., 1000],
+            "energy": [1., 1000],  # not used right now, sample from gaussian
             "cos(zen)": [-1., -1.],  # fixed baseline
         }
-        self.__generation(n_events, index)
+        self.__generation(n_events)
 
         self.__apply_oscillation(pars)
 
@@ -108,34 +109,33 @@ class Generator():
 
         self.__recalculate_response(response)
 
-    def __generation(self, n_events: int, index: float) -> None:
+    def __generation(self, n_events: int) -> None:
         """
-        Generates events, following a power law with index index in energy
+        Generates events, following a gaussian in log10(energy)
         and a uniform distribution in cos(zenith)
 
         Parameters
         ----------
         n_events : int
             number of events generated
-        index : float
-            spectral index \gamma of power law, dN/dE \propto E^{-\gamma}
         """
 
         self.__n_events = n_events
 
-        # TODO: seed the random generator properly for reproducibility?
+        mean_loge = 1.3
+        width_loge = 0.5
 
-        emin, emax = self.__boundaries['energy']
-        # energies = sample_powerlaw(n_events, emin, emax, index)
-
-        logenergies = np.random.normal(loc=1.3, scale=0.5, size=n_events)
+        logenergies = self.__rng.normal(loc=mean_loge, scale=0.5, size=n_events)
         energies = np.power(10, logenergies)
 
         czmin, czmax = self.__boundaries['cos(zen)']
-        cos_zens = np.random.uniform(low=czmin, high=czmax, size=n_events)
+        cos_zens = self.__rng.uniform(low=czmin, high=czmax, size=n_events)
 
-        print(f"Generating events between {emin} GeV and {emax} GeV" + \
-            f" and cos(zenith) values between {czmin} and {czmax}")
+        print(
+            "Generating events with log10(E / GeV) from a Gaussian with" +
+            f" mean {mean_loge} and wdith {width_loge}" +
+            f" and cos(zenith) values uniformly sampled between {czmin} and {czmax}"
+        )
 
         # start with equal weights and without oscillation weight
         self.__events = {
@@ -201,7 +201,7 @@ class Generator():
 
         self.__detector_response = response
 
-        smearing = np.random.normal(
+        smearing = self.__rng.normal(
             loc=response.mu, scale=response.sigma, size=self.__n_events
         )
         log10_ereco = np.log10(self.__events['true_energy']) * smearing
@@ -293,7 +293,7 @@ def get_length_travelled(
 
 
 def sample_powerlaw(
-    size: int, low: float, high: float, index: float
+    size: int, low: float, high: float, index: float, rng: 'np.random.Generator'
 ) -> 'np.ndarray[np.float64]':
     """
     Sample from a power law using the inverse transform method
@@ -309,6 +309,8 @@ def sample_powerlaw(
         upper bound of the distribution
     index : float
         spectral index $\gamma$
+    rng : 'np.random.Generator'
+        RNG
 
     Returns
     -------
@@ -316,7 +318,7 @@ def sample_powerlaw(
         sample of neutrino energies
     """
 
-    uni = np.random.uniform(size=size)
+    uni = rng.uniform(size=size)
 
     def inverse_cdf(y):
         # integration constant
