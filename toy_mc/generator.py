@@ -73,6 +73,14 @@ class Generator():
 
         self.__apply_detector_response(response)
 
+    def get_detector_response(self) -> Response:
+        # response that was used for generating events
+        return self.__detector_response_generation
+
+    def get_oscillation_pars(self) -> OscPars:
+        # current oscillation parameters used in weights
+        return self.__osc_pars
+
     def get_events(self) -> dict:
         return self.__events
 
@@ -88,8 +96,9 @@ class Generator():
         Returns
         -------
         dict
-            histogram (sum(weights) per bin)
-            and statistical uncertainties (sqrt(sum(weights**2)) per bin)
+            histogram (sum(weights) per bin),
+            statistical uncertainties (sqrt(sum(weights**2)) per bin)
+            and bin edges
         """
 
         idx = np.digitize(self.__events['reco_energy'], bin_edges)
@@ -99,15 +108,17 @@ class Generator():
             np.bincount(idx, weights=np.power(self.__events['weights'], 2))
         )
 
-        return {"hist": hist, "hist_unc": hist_unc}
+        return {"hist": hist, "hist_unc": hist_unc, "bin_edges": bin_edges}
 
     def reweight_oscillation(self, pars: OscPars):
 
         self.__apply_oscillation(pars)
+        self.__events['weights'] = self.__response_reweight * self.__events['weights_pre_detector']
 
     def reweight_detector_response(self, response: Response):
 
         self.__recalculate_response(response)
+        self.__events['weights'] = self.__response_reweight * self.__events['weights_pre_detector']
 
     def __generation(self, n_events: int) -> None:
         """
@@ -141,11 +152,18 @@ class Generator():
         self.__events = {
             'true_energy': energies,
             'true_cos(zen)': cos_zens,
-            'weights': np.ones_like(cos_zens),
             'survival_prob': np.ones_like(cos_zens)
         }
 
     def __apply_oscillation(self, pars: OscPars = None) -> None:
+        """
+        Calculate oscillation weight for every event
+
+        Parameters
+        ----------
+        pars : OscPars, optional
+            Oscillation parameters, by default None
+        """
         # get survival properties
 
         if pars is None:
@@ -168,17 +186,8 @@ class Generator():
             lengths, self.__events['true_energy'],
             self.__osc_pars.delta_mqs, self.__osc_pars.sinsq_2theta
         )
-
-        # re-weight events:
-        # if oscillation weights were applied previously divide this out
-        # otherwise self.__events['survival_prob'] is just 1.
-        reweight = prob / np.copy(self.__events['survival_prob'])
-
-        # store current survival probabilities
-        self.__events['survival_prob'] = prob
-
-        # apply this factor to the event's weights
-        self.__events['weights'] *= reweight
+        # thiese are the event's weights before the detector response
+        self.__events['weights_pre_detector'] = prob
 
         # "cache" callable for crosschecks
         def survival_prob_used(lengths, energies):
@@ -199,7 +208,7 @@ class Generator():
             simplified detector response: \mu and \sigma of a lognormal pdf
         """
 
-        self.__detector_response = response
+        self.__detector_response_generation = response
 
         smearing = self.__rng.normal(
             loc=response.mu, scale=response.sigma, size=self.__n_events
@@ -208,13 +217,27 @@ class Generator():
 
         self.__events['reco_energy'] = np.power(10, log10_ereco)
 
+        # actual weights are not changed
+        self.__events['weights'] = np.copy(self.__events['weights_pre_detector'])
+        # only when response is recalculated these factors will change
+        self.__response_reweight = np.ones_like(self.__events['weights'])
+
         # bookkeep smearing values
         self.__smearing = smearing
 
     def __recalculate_response(self, response: Response) -> None:
+        """
+        Reweight every event to a new detector response by the ratio of the
+        analytically known detector response pdf
+
+        Parameters
+        ----------
+        response : Response
+            New detector response for which to calculate re-weighting factors
+        """
         # reweight every event to a new detector response:
 
-        old_response = self.__detector_response
+        old_response = self.__detector_response_generation
 
         reweight = norm.pdf(
             self.__smearing, loc=response.mu, scale=response.sigma
@@ -224,7 +247,7 @@ class Generator():
             scale=old_response.sigma,
         )
 
-        self.__events['weights'] *= reweight
+        self.__response_reweight = reweight
 
 
 def survival_probability(
