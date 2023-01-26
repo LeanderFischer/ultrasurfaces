@@ -56,7 +56,7 @@ class Generator():
             Parameters for 2-flavor osciallation, by default None so that
             default values are used
         rng_seed : int
-            seed for the RNG, can be 
+            seed for the RNG, can be
             {None, int, array_like[ints], SeedSequence, BitGenerator, Generator}
         """
 
@@ -103,9 +103,9 @@ class Generator():
 
         idx = np.digitize(self.__events['reco_energy'], bin_edges)
 
-        hist = np.bincount(idx, weights=self.__events['weights'])
+        hist = np.bincount(idx, weights=self.__events['weights'], minlength=len(bin_edges)+1)
         hist_unc = np.sqrt(
-            np.bincount(idx, weights=np.power(self.__events['weights'], 2))
+            np.bincount(idx, weights=np.power(self.__events['weights'], 2), minlength=len(bin_edges)+1)
         )
 
         return {"hist": hist, "hist_unc": hist_unc, "bin_edges": bin_edges}
@@ -136,16 +136,16 @@ class Generator():
         mean_loge = 1.3
         width_loge = 0.5
 
-        logenergies = self.__rng.normal(loc=mean_loge, scale=0.5, size=n_events)
+        logenergies = self.__rng.normal(loc=mean_loge, scale=width_loge, size=n_events)
         energies = np.power(10, logenergies)
 
         czmin, czmax = self.__boundaries['cos(zen)']
         cos_zens = self.__rng.uniform(low=czmin, high=czmax, size=n_events)
 
         print(
-            "Generating events with log10(E / GeV) from a Gaussian with" +
-            f" mean {mean_loge} and wdith {width_loge}" +
-            f" and cos(zenith) values uniformly sampled between {czmin} and {czmax}"
+            f"Generating events with log10(E / GeV) from a Gaussian with "
+            f"mean {mean_loge} and wdith {width_loge} "
+            f"and cos(zenith) values uniformly sampled between {czmin} and {czmax}."
         )
 
         # start with equal weights and without oscillation weight
@@ -186,7 +186,7 @@ class Generator():
             lengths, self.__events['true_energy'],
             self.__osc_pars.delta_mqs, self.__osc_pars.sinsq_2theta
         )
-        # thiese are the event's weights before the detector response
+        # these are the event's weights before the detector response
         self.__events['weights_pre_detector'] = prob
 
         # "cache" callable for crosschecks
@@ -345,8 +345,8 @@ def sample_powerlaw(
 
     def inverse_cdf(y):
         # integration constant
-        norm = high**(1 - index) - low**(1 - index)
+        normalization = high**(1 - index) - low**(1 - index)
 
-        return np.power((y * norm + low**(1 - index)), 1 / (1 - index))
+        return np.power((y * normalization + low**(1 - index)), 1 / (1 - index))
 
     return inverse_cdf(uni)

@@ -1,0 +1,63 @@
+# ultrasurfaces plot stylesheet
+
+# # custom values used
+# major_size = 6
+# minor_size = 4
+# tick_width = 2
+# tick_lablesize = 28
+# legend_fontsize = 16
+# dark_gray = .15
+# light_gray = .8
+
+# general stuff
+figure.facecolor: white
+figure.figsize: 10, 7
+text.color: .15
+image.cmap: Greys
+lines.solid_capstyle: round
+
+# font stuff
+font.family: sans-serif
+font.weight: normal
+font.sans-serif: Arial, Liberation Sans, DejaVu Sans, Bitstream Vera Sans, sans-serif
+font.size: 28
+
+# axis stuff
+axes.labelcolor: .15
+axes.labelsize : 28
+axes.axisbelow: True
+axes.facecolor: white
+axes.edgecolor: .8
+axes.linewidth: 1
+axes.titlesize: 28
+
+# legend stuff
+legend.fontsize: 16
+legend.frameon: False
+legend.numpoints: 1
+legend.scatterpoints: 1
+
+# grid stuff
+axes.grid: True
+grid.color: .8
+grid.linestyle: -
+
+# ticks stuff
+xtick.major.size: 6
+ytick.major.size: 6
+xtick.minor.size: 4
+ytick.minor.size: 4
+
+xtick.direction: out
+ytick.direction: out
+
+xtick.color: .15
+ytick.color: .15
+
+xtick.major.width: 2
+xtick.minor.width: 2
+ytick.major.width: 2
+ytick.minor.width: 2
+
+xtick.labelsize: 28
+ytick.labelsize: 28
