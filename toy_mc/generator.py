@@ -197,6 +197,34 @@ class Generator():
             )
         self.survival_prob = survival_prob_used
 
+    def get_oscillation_reweight_factor(self, pars: OscPars) -> 'np.ndarray[np.float64]':
+        """
+        Calculate factor to reweight to new set of oscillation parameters for every event
+
+        Parameters
+        ----------
+        pars : OscPars, optional
+            Oscillation parameters, by default None
+        
+        Returns
+        -------
+        'np.ndarray[np.float64]'
+            reweighting factor for every event
+        """
+
+        lengths = get_length_travelled(
+            np.arccos(self.__events['true_cos(zen)'])
+        )
+
+        prob = survival_probability(
+            lengths, self.__events['true_energy'],
+            pars.delta_mqs, pars.sinsq_2theta
+        )
+
+        reweight_factors = prob / self.__events['weights_pre_detector']
+        
+        return reweight_factors
+
     def __apply_detector_response(self, response: Response) -> None:
         """
         Smear the true neutrino energy by a log-normal distribution,
@@ -350,3 +378,31 @@ def sample_powerlaw(
         return np.power((y * normalization + low**(1 - index)), 1 / (1 - index))
 
     return inverse_cdf(uni)
+
+
+def create_histogram(values, weights, bin_edges) -> dict:
+    """
+    Create histogram for a certain binning of set of values
+
+    Parameters
+    ----------
+    values : 'np.ndarray[np.float64]'
+        values to be histogrammed
+    bin_edges : 'np.ndarray[np.float64]'
+        bin edges of the histogram
+
+    Returns
+    -------
+    dict
+        histogram (sum(weights) per bin),
+        statistical uncertainties (sqrt(sum(weights**2)) per bin)
+        and bin edges
+    """
+
+    idx = np.digitize(values, bin_edges)
+
+    hist = np.bincount(idx, weights=weights, minlength=len(bin_edges)+1)
+    hist_unc = np.sqrt(
+        np.bincount(idx, weights=np.power(weights, 2), minlength=len(bin_edges)+1)
+    )
+    return {"hist": hist, "hist_unc": hist_unc, "bin_edges": bin_edges}
