@@ -8,6 +8,8 @@ from sklearn.pipeline import Pipeline
 from sklearn.linear_model import TheilSenRegressor
 from sklearn.preprocessing import PolynomialFeatures
 
+from generator import create_histogram
+
 
 class ToyAnalysis_Hobo():
     """
@@ -91,6 +93,7 @@ class Toy_Analysis_USF():
     def __init__(self, sets) -> None:
 
         self._sets = sets
+        self.__default_pars = sets['mu_baseline'].get_oscillation_pars()
 
         self.__set_variables_and_labels()
 
@@ -188,13 +191,18 @@ class Toy_Analysis_USF():
             ]
         ) - mu_nom
 
-        poly = PolynomialFeatures(
-            2, include_bias=False, interaction_only=False
-        )
-        event_x = poly.fit_transform(np.vstack((mus, sigmas)).T)
-
+        # poly = PolynomialFeatures(
+        #     2, include_bias=False, interaction_only=False
+        # )
+        # event_x = poly.fit_transform(np.vstack((mus, sigmas)).T)
+        # simplify and not use polynomial features for now...
+        event_x = mus[:, np.newaxis]
         n_events = len(nom_events["weights"])
-        per_event_gradients_nom = np.zeros((n_events, event_x.shape[1]))
+
+        # simplify and not use polynomial features for now...
+        # n_events = len(nom_events["weights"])
+        # per_event_gradients_nom = np.zeros((n_events, event_x.shape[1]))
+        per_event_gradients_nom = np.zeros(n_events)
 
         # looping over many events in Python is super slow...
         # but unfortunately there is no version of the TheilSenRegressor
@@ -212,22 +220,30 @@ class Toy_Analysis_USF():
 
             # because we fit without intercept, we must subtract the offset of 1!
             event_y = pred_probs - 1.
+            # print(event_y)
+            # print(event_x)
             reg = TheilSenRegressor(random_state=0,
                                     fit_intercept=False).fit(event_x, event_y)
 
             # extract the gradients from the estimator
-            per_event_gradients_nom[i] = reg.coef_
+            per_event_gradients_nom[i] = reg.coef_[0]
 
         self._per_event_gradients_nom = per_event_gradients_nom
 
-    def get_histogram(self, response, osc_pars) -> dict:
+    def get_histogram(self, response, osc_pars, binning) -> dict:
 
         # start prediction from baseline/nominal set
         baseline_set = self._sets['mu_baseline']
         # reweight baseline set to oscillation parameters
         baseline_set.reweight_oscillation(osc_pars)
-        hist_base = baseline_set.get_histogram(self.__binning)['hist']
-        hist_base_unc = baseline_set.get_histogram(self.__binning)['hist_unc']
+
+        weights = baseline_set.get_events()["weights"]
+
+        print(weights.shape)
+        print(self._per_event_gradients_nom.shape)
+
+        # hist_base = baseline_set.get_histogram(self.__binning)['hist']
+        # hist_base_unc = baseline_set.get_histogram(self.__binning)['hist_unc']
 
         # not strictly necessary: re-set generator of baseline set to
         # default oscillation pars
@@ -238,19 +254,15 @@ class Toy_Analysis_USF():
             "Warning: Only gradients with respect to 'mu' are implemeted so far"
         )
         # TODO otherwise: loop over parameters...
-        raise NotImplementedError("WIP")
-        # baseline_response = baseline_set.get_detector_response()
-        # # per-event calculation here
-        # hist_final = hist_base + (response.mu - baseline_response.mu
-        #                          ) * self.__gradients['mu']
-
+        baseline_response = baseline_set.get_detector_response()
+        # per-event calculation here
+        weights_total = weights * (
+            1 +
+            (response.mu - baseline_response.mu) * self._per_event_gradients_nom
+        )
         # # return histogram in full format (see Generator), statistical
         # # uncertainties from gradients not yet included...
-        # return {
-        #     'hist': hist_final,
-        #     'hist_unc': hist_base_unc,
-        #     'bin_edges': self.__binning
-        # }
+        return create_histogram(self._X_nom[:, 1], weights_total, binning)
 
     def get_all_transformed_variables(self):
         return self._X_transformed
