@@ -70,21 +70,20 @@ class ToyAnalysis_Hobo():
         self.__baseline_set.reweight_oscillation(self.__default_pars)
 
         # apply gradients:
-        raise NotImplementedError("WIP")
-        # print(
-        #     "Warning: Only gradients with respect to 'mu' are implemeted so far"
-        # )
-        # # TODO otherwise: loop over parameters...
-        # hist_final = hist_base + (response.mu - self.__baseline_reponse.mu
-        #                          ) * self.__gradients['mu']
+        print(
+            "Warning: Only gradients with respect to 'mu' are implemeted so far"
+        )
+        # TODO otherwise: loop over parameters...
+        hist_final = hist_base + (response.mu - self.__baseline_reponse.mu
+                                 ) * self.__gradients['mu']
 
-        # # return histogram in full format (see Generator), statistical
-        # # uncertainties from gradients not yet included...
-        # return {
-        #     'hist': hist_final,
-        #     'hist_unc': hist_base_unc,
-        #     'bin_edges': self.__binning
-        # }
+        # return histogram in full format (see Generator), statistical
+        # uncertainties from gradients not yet included...
+        return {
+            'hist': hist_final,
+            'hist_unc': hist_base_unc,
+            'bin_edges': self.__binning
+        }
 
 
 class Toy_Analysis_USF():
@@ -239,18 +238,19 @@ class Toy_Analysis_USF():
             "Warning: Only gradients with respect to 'mu' are implemeted so far"
         )
         # TODO otherwise: loop over parameters...
-        baseline_response = baseline_set.get_detector_response()
-        # per-event calculation here
-        hist_final = hist_base + (response.mu - baseline_response.mu
-                                 ) * self.__gradients['mu']
+        raise NotImplementedError("WIP")
+        # baseline_response = baseline_set.get_detector_response()
+        # # per-event calculation here
+        # hist_final = hist_base + (response.mu - baseline_response.mu
+        #                          ) * self.__gradients['mu']
 
-        # return histogram in full format (see Generator), statistical
-        # uncertainties from gradients not yet included...
-        return {
-            'hist': hist_final,
-            'hist_unc': hist_base_unc,
-            'bin_edges': self.__binning
-        }
+        # # return histogram in full format (see Generator), statistical
+        # # uncertainties from gradients not yet included...
+        # return {
+        #     'hist': hist_final,
+        #     'hist_unc': hist_base_unc,
+        #     'bin_edges': self.__binning
+        # }
 
     def get_all_transformed_variables(self):
         return self._X_transformed
