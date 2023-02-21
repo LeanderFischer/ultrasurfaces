@@ -1,8 +1,8 @@
-'''
+"""
 Toy Monte Carlo event generation.
 Creates events following a powerlaw, applies two-flavor oscillations and
 simulates a detector response.
-'''
+"""
 
 from typing import NamedTuple
 import numpy as np
@@ -11,16 +11,17 @@ from scipy.stats import norm
 import logging
 
 logger = logging.getLogger(__name__)
-'''
+"""
 Units? (GeV, km)
 Type of generated events? (pd dataframe?, just a dict(var->np.ndarray as now?))
-'''
+"""
 
 
 class Response(NamedTuple):
     """
     simplified detector response: \mu and \sigma of a lognormal pdf
     """
+
     mu: float
     sigma: float
 
@@ -29,11 +30,12 @@ class OscPars(NamedTuple):
     """
     parameters for 2 flavor oscillation
     """
+
     delta_mqs: float
     sinsq_2theta: float
 
 
-class Generator():
+class Generator:
     def __init__(
         self,
         n_events: int,
@@ -64,8 +66,8 @@ class Generator():
 
         # define sample boundaries
         self.__boundaries = {
-            "energy": [1., 1000],  # not used right now, sample from gaussian
-            "cos(zen)": [-1., -1.],  # fixed baseline
+            "energy": [1.0, 1000],  # not used right now, sample from gaussian
+            "cos(zen)": [-1.0, -1.0],  # fixed baseline
         }
         self.__generation(n_events)
 
@@ -101,11 +103,17 @@ class Generator():
             and bin edges
         """
 
-        idx = np.digitize(self.__events['reco_energy'], bin_edges)
+        idx = np.digitize(self.__events["reco_energy"], bin_edges)
 
-        hist = np.bincount(idx, weights=self.__events['weights'], minlength=len(bin_edges)+1)
+        hist = np.bincount(
+            idx, weights=self.__events["weights"], minlength=len(bin_edges) + 1
+        )
         hist_unc = np.sqrt(
-            np.bincount(idx, weights=np.power(self.__events['weights'], 2), minlength=len(bin_edges)+1)
+            np.bincount(
+                idx,
+                weights=np.power(self.__events["weights"], 2),
+                minlength=len(bin_edges) + 1,
+            )
         )
 
         return {"hist": hist, "hist_unc": hist_unc, "bin_edges": bin_edges}
@@ -113,12 +121,16 @@ class Generator():
     def reweight_oscillation(self, pars: OscPars):
 
         self.__apply_oscillation(pars)
-        self.__events['weights'] = self.__response_reweight * self.__events['weights_pre_detector']
+        self.__events["weights"] = (
+            self.__response_reweight * self.__events["weights_pre_detector"]
+        )
 
     def reweight_detector_response(self, response: Response):
 
         self.__recalculate_response(response)
-        self.__events['weights'] = self.__response_reweight * self.__events['weights_pre_detector']
+        self.__events["weights"] = (
+            self.__response_reweight * self.__events["weights_pre_detector"]
+        )
 
     def __generation(self, n_events: int) -> None:
         """
@@ -139,7 +151,7 @@ class Generator():
         logenergies = self.__rng.normal(loc=mean_loge, scale=width_loge, size=n_events)
         energies = np.power(10, logenergies)
 
-        czmin, czmax = self.__boundaries['cos(zen)']
+        czmin, czmax = self.__boundaries["cos(zen)"]
         cos_zens = self.__rng.uniform(low=czmin, high=czmax, size=n_events)
 
         print(
@@ -150,9 +162,9 @@ class Generator():
 
         # start with equal weights and without oscillation weight
         self.__events = {
-            'true_energy': energies,
-            'true_cos(zen)': cos_zens,
-            'survival_prob': np.ones_like(cos_zens)
+            "true_energy": energies,
+            "true_cos(zen)": cos_zens,
+            "survival_prob": np.ones_like(cos_zens),
         }
 
     def __apply_oscillation(self, pars: OscPars = None) -> None:
@@ -173,31 +185,36 @@ class Generator():
             sinsq_theta_23 = 0.565
             # convert this to sin**2(2 \theta)
             theta_23 = np.arcsin(np.sqrt(sinsq_theta_23))
-            sinsq_2theta_23 = np.sin(2 * theta_23)**2
+            sinsq_2theta_23 = np.sin(2 * theta_23) ** 2
             self.__osc_pars = OscPars(delta_msq_31, sinsq_2theta_23)
         else:
             self.__osc_pars = pars
 
-        lengths = get_length_travelled(
-            np.arccos(self.__events['true_cos(zen)'])
-        )
+        lengths = get_length_travelled(np.arccos(self.__events["true_cos(zen)"]))
 
         prob = survival_probability(
-            lengths, self.__events['true_energy'],
-            self.__osc_pars.delta_mqs, self.__osc_pars.sinsq_2theta
+            lengths,
+            self.__events["true_energy"],
+            self.__osc_pars.delta_mqs,
+            self.__osc_pars.sinsq_2theta,
         )
         # these are the event's weights before the detector response
-        self.__events['weights_pre_detector'] = prob
+        self.__events["weights_pre_detector"] = prob
 
         # "cache" callable for crosschecks
         def survival_prob_used(lengths, energies):
             return survival_probability(
-                lengths, energies, self.__osc_pars.delta_mqs,
-                self.__osc_pars.sinsq_2theta
+                lengths,
+                energies,
+                self.__osc_pars.delta_mqs,
+                self.__osc_pars.sinsq_2theta,
             )
+
         self.survival_prob = survival_prob_used
 
-    def get_oscillation_reweight_factor(self, pars: OscPars) -> 'np.ndarray[np.float64]':
+    def get_oscillation_reweight_factor(
+        self, pars: OscPars
+    ) -> "np.ndarray[np.float64]":
         """
         Calculate factor to reweight to new set of oscillation parameters for every event
 
@@ -205,24 +222,21 @@ class Generator():
         ----------
         pars : OscPars, optional
             Oscillation parameters, by default None
-        
+
         Returns
         -------
         'np.ndarray[np.float64]'
             reweighting factor for every event
         """
 
-        lengths = get_length_travelled(
-            np.arccos(self.__events['true_cos(zen)'])
-        )
+        lengths = get_length_travelled(np.arccos(self.__events["true_cos(zen)"]))
 
         prob = survival_probability(
-            lengths, self.__events['true_energy'],
-            pars.delta_mqs, pars.sinsq_2theta
+            lengths, self.__events["true_energy"], pars.delta_mqs, pars.sinsq_2theta
         )
 
-        reweight_factors = prob / self.__events['weights_pre_detector']
-        
+        reweight_factors = prob / self.__events["weights_pre_detector"]
+
         return reweight_factors
 
     def __apply_detector_response(self, response: Response) -> None:
@@ -241,14 +255,14 @@ class Generator():
         smearing = self.__rng.normal(
             loc=response.mu, scale=response.sigma, size=self.__n_events
         )
-        log10_ereco = np.log10(self.__events['true_energy']) * smearing
+        log10_ereco = np.log10(self.__events["true_energy"]) * smearing
 
-        self.__events['reco_energy'] = np.power(10, log10_ereco)
+        self.__events["reco_energy"] = np.power(10, log10_ereco)
 
         # actual weights are not changed
-        self.__events['weights'] = np.copy(self.__events['weights_pre_detector'])
+        self.__events["weights"] = np.copy(self.__events["weights_pre_detector"])
         # only when response is recalculated these factors will change
-        self.__response_reweight = np.ones_like(self.__events['weights'])
+        self.__response_reweight = np.ones_like(self.__events["weights"])
 
         # bookkeep smearing values
         self.__smearing = smearing
@@ -279,8 +293,10 @@ class Generator():
 
 
 def survival_probability(
-    length: 'np.ndarray[np.float64]', energy: 'np.ndarray[np.float64]',
-    delta_msq: float, sinsq_2theta: float
+    length: "np.ndarray[np.float64]",
+    energy: "np.ndarray[np.float64]",
+    delta_msq: float,
+    sinsq_2theta: float,
 ):
     """
     Survival probability in two-flavor approximation
@@ -303,18 +319,16 @@ def survival_probability(
         survival probability per neutrino
     """
 
-    assert sinsq_2theta <= 1., 'oscillation amplitudes greater than one?'
-    assert sinsq_2theta >= 0., 'negative oscillation amplitudes?'
+    assert sinsq_2theta <= 1.0, "oscillation amplitudes greater than one?"
+    assert sinsq_2theta >= 0.0, "negative oscillation amplitudes?"
 
-    assert delta_msq >= 0., 'negative square of the mass splitting?'
+    assert delta_msq >= 0.0, "negative square of the mass splitting?"
 
     phase = 1.267 * delta_msq * length / energy
-    return 1 - sinsq_2theta * np.sin(phase)**2
+    return 1 - sinsq_2theta * np.sin(phase) ** 2
 
 
-def get_length_travelled(
-    zenith: 'np.ndarray[np.float64]'
-) -> 'np.ndarray[np.float64]':
+def get_length_travelled(zenith: "np.ndarray[np.float64]") -> "np.ndarray[np.float64]":
     """
     Calculate length travelled by a neutrinos generated at specific zenith
     angles, using a IceCube DeepCore-like detector geometry
@@ -331,21 +345,22 @@ def get_length_travelled(
         length of the neutrino travelled when arriving at the detector
     """
 
-    r_earth = 6371.  # in km
-    d_det = 2.  # in km
-    h_atm = 20.  # in km
+    r_earth = 6371.0  # in km
+    d_det = 2.0  # in km
+    h_atm = 20.0  # in km
 
     def travelled_distance(zenith):
-        return (r_earth - d_det) * np.cos(np.pi - zenith) + \
-            np.sqrt((r_earth + h_atm)**2 - (r_earth - d_det)**2 * \
-                (1 - np.cos(np.pi - zenith)**2))
+        return (r_earth - d_det) * np.cos(np.pi - zenith) + np.sqrt(
+            (r_earth + h_atm) ** 2
+            - (r_earth - d_det) ** 2 * (1 - np.cos(np.pi - zenith) ** 2)
+        )
 
     return travelled_distance(zenith)  # in km
 
 
 def sample_powerlaw(
-    size: int, low: float, high: float, index: float, rng: 'np.random.Generator'
-) -> 'np.ndarray[np.float64]':
+    size: int, low: float, high: float, index: float, rng: "np.random.Generator"
+) -> "np.ndarray[np.float64]":
     """
     Sample from a power law using the inverse transform method
     $$p(E) \propto E^{-\gamma)}$$
@@ -373,9 +388,9 @@ def sample_powerlaw(
 
     def inverse_cdf(y):
         # integration constant
-        normalization = high**(1 - index) - low**(1 - index)
+        normalization = high ** (1 - index) - low ** (1 - index)
 
-        return np.power((y * normalization + low**(1 - index)), 1 / (1 - index))
+        return np.power((y * normalization + low ** (1 - index)), 1 / (1 - index))
 
     return inverse_cdf(uni)
 
@@ -401,8 +416,8 @@ def create_histogram(values, weights, bin_edges) -> dict:
 
     idx = np.digitize(values, bin_edges)
 
-    hist = np.bincount(idx, weights=weights, minlength=len(bin_edges)+1)
+    hist = np.bincount(idx, weights=weights, minlength=len(bin_edges) + 1)
     hist_unc = np.sqrt(
-        np.bincount(idx, weights=np.power(weights, 2), minlength=len(bin_edges)+1)
+        np.bincount(idx, weights=np.power(weights, 2), minlength=len(bin_edges) + 1)
     )
     return {"hist": hist, "hist_unc": hist_unc, "bin_edges": bin_edges}
