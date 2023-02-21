@@ -75,15 +75,18 @@ class Generator:
 
         self.__apply_detector_response(response)
 
-    def get_detector_response(self) -> Response:
+    @property
+    def detector_response(self) -> Response:
         # response that was used for generating events
         return self.__detector_response_generation
 
-    def get_oscillation_pars(self) -> OscPars:
+    @property
+    def oscillation_pars(self) -> OscPars:
         # current oscillation parameters used in weights
         return self.__osc_pars
 
-    def get_events(self) -> dict:
+    @property
+    def events(self) -> dict:
         return self.__events
 
     def get_histogram(self, bin_edges) -> dict:
