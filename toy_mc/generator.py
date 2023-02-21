@@ -6,7 +6,9 @@ simulates a detector response.
 
 from typing import NamedTuple
 import numpy as np
+import pandas as pd
 from scipy.stats import norm
+from .histogram import Histogram
 
 import logging
 
@@ -87,7 +89,7 @@ class Generator:
 
     @property
     def events(self) -> dict:
-        return self.__events
+        return pd.DataFrame(self.__events)
 
     def get_histogram(self, bin_edges) -> dict:
         """
@@ -106,20 +108,9 @@ class Generator:
             and bin edges
         """
 
-        idx = np.digitize(self.__events["reco_energy"], bin_edges)
-
-        hist = np.bincount(
-            idx, weights=self.__events["weights"], minlength=len(bin_edges) + 1
-        )
-        hist_unc = np.sqrt(
-            np.bincount(
-                idx,
-                weights=np.power(self.__events["weights"], 2),
-                minlength=len(bin_edges) + 1,
-            )
-        )
-
-        return {"hist": hist, "hist_unc": hist_unc, "bin_edges": bin_edges}
+        hist = Histogram(bin_edges)
+        hist.fill(self.__events["reco_energy"], weights=self.__events["weights"])
+        return hist
 
     def reweight_oscillation(self, pars: OscPars):
 

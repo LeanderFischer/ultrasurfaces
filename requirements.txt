@@ -6,3 +6,5 @@ matplotlib
 scikit-learn
 tqdm
 black
+pandas
+pint
