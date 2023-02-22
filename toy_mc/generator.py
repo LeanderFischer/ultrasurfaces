@@ -44,6 +44,7 @@ class Generator:
         response: Response,
         pars: OscPars = None,
         rng_seed: int = None,
+        name: str = None
     ) -> None:
         """
         Toy MC generator, sampling events from a power law neutrino energy
@@ -62,6 +63,10 @@ class Generator:
         rng_seed : int
             seed for the RNG, can be
             {None, int, array_like[ints], SeedSequence, BitGenerator, Generator}
+        name : str
+            Name of this generator. This will be used to name the unique probability 
+            columns that are added to DataFrames with events. Be sure to give one 
+            unique name to each systematic set that is used.
         """
 
         self.__rng = np.random.default_rng(rng_seed)
@@ -76,6 +81,8 @@ class Generator:
         self.__apply_oscillation(pars)
 
         self.__apply_detector_response(response)
+        
+        self.name = name
 
     @property
     def detector_response(self) -> Response:
