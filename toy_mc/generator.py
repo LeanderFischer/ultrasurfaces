@@ -158,7 +158,7 @@ class Generator:
         self.__events = {
             "true_energy": energies,
             "true_cos(zen)": cos_zens,
-            "survival_prob": np.ones_like(cos_zens),
+            "weights_pre_detector": np.ones_like(cos_zens),
         }
 
     def __apply_oscillation(self, pars: OscPars = None) -> None:
