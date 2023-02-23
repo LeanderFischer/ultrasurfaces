@@ -6,3 +6,7 @@ matplotlib
 scikit-learn
 tqdm
 black
+pandas
+uncertainties
+numba
+

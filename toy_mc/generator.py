@@ -6,7 +6,9 @@ simulates a detector response.
 
 from typing import NamedTuple
 import numpy as np
+import pandas as pd
 from scipy.stats import norm
+from .histogram import Histogram
 
 import logging
 
@@ -42,6 +44,7 @@ class Generator:
         response: Response,
         pars: OscPars = None,
         rng_seed: int = None,
+        name: str = None
     ) -> None:
         """
         Toy MC generator, sampling events from a power law neutrino energy
@@ -60,6 +63,10 @@ class Generator:
         rng_seed : int
             seed for the RNG, can be
             {None, int, array_like[ints], SeedSequence, BitGenerator, Generator}
+        name : str
+            Name of this generator. This will be used to name the unique probability 
+            columns that are added to DataFrames with events. Be sure to give one 
+            unique name to each systematic set that is used.
         """
 
         self.__rng = np.random.default_rng(rng_seed)
@@ -74,17 +81,22 @@ class Generator:
         self.__apply_oscillation(pars)
 
         self.__apply_detector_response(response)
+        
+        self.name = name
 
-    def get_detector_response(self) -> Response:
+    @property
+    def detector_response(self) -> Response:
         # response that was used for generating events
         return self.__detector_response_generation
 
-    def get_oscillation_pars(self) -> OscPars:
+    @property
+    def oscillation_pars(self) -> OscPars:
         # current oscillation parameters used in weights
         return self.__osc_pars
 
-    def get_events(self) -> dict:
-        return self.__events
+    @property
+    def events(self) -> dict:
+        return pd.DataFrame(self.__events)
 
     def get_histogram(self, bin_edges) -> dict:
         """
@@ -103,20 +115,9 @@ class Generator:
             and bin edges
         """
 
-        idx = np.digitize(self.__events["reco_energy"], bin_edges)
-
-        hist = np.bincount(
-            idx, weights=self.__events["weights"], minlength=len(bin_edges) + 1
-        )
-        hist_unc = np.sqrt(
-            np.bincount(
-                idx,
-                weights=np.power(self.__events["weights"], 2),
-                minlength=len(bin_edges) + 1,
-            )
-        )
-
-        return {"hist": hist, "hist_unc": hist_unc, "bin_edges": bin_edges}
+        hist = Histogram(bin_edges)
+        hist.fill(self.__events["reco_energy"], weights=self.__events["weights"])
+        return hist
 
     def reweight_oscillation(self, pars: OscPars):
 
@@ -164,7 +165,7 @@ class Generator:
         self.__events = {
             "true_energy": energies,
             "true_cos(zen)": cos_zens,
-            "survival_prob": np.ones_like(cos_zens),
+            "weights_pre_detector": np.ones_like(cos_zens),
         }
 
     def __apply_oscillation(self, pars: OscPars = None) -> None:
