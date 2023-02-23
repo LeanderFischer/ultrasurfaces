@@ -172,13 +172,13 @@ def ngrad(x, w, p_obs):
 
 
 def fit_gradients(
-    dataframe,
-    prob_columns,
-    delta_p,
-    grad_names,
-    minmizer_method="l-bfgs-b",
-    disable_progress=False,
-):
+    dataframe: pd.DataFrame,
+    prob_columns: List[str],
+    delta_p: np.ndarray,
+    grad_names: List[str],
+    minmizer_method: str = "l-bfgs-b",
+    disable_progress: bool = False,
+) -> pd.DataFrame:
     """
     Fit gradients for a given dataframe.
 
