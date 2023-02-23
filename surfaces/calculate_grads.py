@@ -1,9 +1,10 @@
 import typing
 import numpy as np
+import pandas as pd
+from typing import List
 from tqdm import tqdm
 from scipy.optimize import minimize
 from numba import njit
-
 
 def make_delta_p_from_grad_names(gradient_names, sys_sets, nominal_set):
     """
@@ -17,21 +18,36 @@ def make_delta_p_from_grad_names(gradient_names, sys_sets, nominal_set):
         for second order gradients. The polynomial feature to be calculated is the
         offset from the nominal point for each parameter named in the string, multiplied.
         The output matrix is guaranteed to contain features in the named order.
-    sys_sets : list of Generator
-        List of toy_mc.Generator objects defining the systematic sets.
-    nominal_set : Generator
-        A toy_mc.Generator object defining the nominal set.
+    sys_sets : list of toy_mc.Generator or toy_mc.Response
+        List of toy_mc.Generator objects defining the systematic sets or toy_mc.Response
+        objects.
+    nominal_set : toy_mc.Generator or toy_mc.Response
+        A toy_mc.Generator object defining the nominal set. This set is always 
+        added to the list of systematic sets as the first element. May also be a
+        toy_mc.Response object.
     """
-    delta_p = np.ones((len(gradient_names), len(sys_sets)))
-    nominal_params = nominal_set.detector_response
+    delta_p = np.ones((len(gradient_names), len(sys_sets) + 1))
+    if hasattr(nominal_set, "detector_response"):
+        nominal_response = nominal_set.detector_response
+    else:
+        nominal_response = nominal_set
+    # if the objects inside sys_sets are toy_mc.Generator objects, convert them to
+    # toy_mc.Response objects
+    sys_responses = []
+    for sys_set in sys_sets:
+        if hasattr(sys_set, "detector_response"):
+            sys_responses.append(sys_set.detector_response)
+        else:
+            sys_responses.append(sys_set)
+    sys_responses = [nominal_response] + sys_responses
     for i, gradient_name in enumerate(gradient_names):
-        for j, sys_set in enumerate(sys_sets):
+        for j, sys_response in enumerate(sys_responses):
             for param in gradient_name.split("grad")[-1].split("__")[1:]:
                 # The appropriate entry for the intercept term is always just a one.
                 if param == "intercept":
                     continue
-                delta_p[i, j] *= getattr(sys_set.detector_response, param) - getattr(
-                    nominal_params, param
+                delta_p[i, j] *= getattr(sys_response, param) - getattr(
+                    nominal_response, param
                 )
     return delta_p
 
@@ -115,7 +131,7 @@ def softmax(x, w):
 
 
 @njit
-def softmax_jac(p):
+def softmax_jac(p: np.ndarray) -> np.ndarray:
     """
     Get the Jacobian of the softmax activations given by the parameter p.
     """
@@ -123,7 +139,7 @@ def softmax_jac(p):
 
 
 @njit
-def nllh(x, w, p_obs):
+def nllh(x: np.ndarray, w: np.ndarray, p_obs: np.ndarray) -> float:
     """
     Calculate negative log-likelihood of multinomial distributions, without constant offsets.
 
@@ -146,7 +162,7 @@ def nllh(x, w, p_obs):
 
 
 @njit
-def ngrad(x, w, p_obs):
+def nllh_grad(x: np.ndarray, w: np.ndarray, p_obs: np.ndarray) -> np.ndarray:
     """
     Calculate gradient of negative log-likelihood of multinomial distributions.
 
@@ -203,6 +219,9 @@ def fit_gradients(
 
     n_grads = delta_p.shape[0]
     assert n_grads == len(grad_names)
+    # assert correct dimensions of delta_p
+    assert delta_p.shape[1] == len(prob_columns)
+    assert delta_p.shape[0] == len(grad_names)
     x0 = np.zeros(n_grads)
 
     indices = list()
@@ -211,10 +230,10 @@ def fit_gradients(
     total = len(dataframe)
     for row in tqdm(dataframe.itertuples(), total=total, disable=disable_progress):
         prob_obs = list()
-        for key in keys:
+        for key in prob_columns:
             prob_obs.append(row._asdict()[key])
 
-        prob_obs = np.array(p)
+        prob_obs = np.array(prob_obs)
 
         res = minimize(
             nllh,
