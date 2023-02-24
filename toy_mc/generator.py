@@ -98,7 +98,7 @@ class Generator:
     def events(self) -> dict:
         return pd.DataFrame(self.__events)
 
-    def get_histogram(self, bin_edges) -> dict:
+    def get_histogram(self, bin_edges, variable="reco_energy") -> dict:
         """
         Get histogram for a certain binning in reconstructed energy
 
@@ -106,7 +106,8 @@ class Generator:
         ----------
         bin_edges : 'np.ndarray[np.float64]'
             bin edges of the histogram
-
+        variable : str, optional
+            variable to histogram, by default "reco_energy"
         Returns
         -------
         dict
@@ -116,7 +117,7 @@ class Generator:
         """
 
         hist = Histogram(bin_edges)
-        hist.fill(self.__events["reco_energy"], weights=self.__events["weights"])
+        hist.fill(self.__events[variable], weights=self.__events["weights"])
         return hist
 
     def reweight_oscillation(self, pars: OscPars):

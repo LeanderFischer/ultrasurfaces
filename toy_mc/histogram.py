@@ -94,8 +94,7 @@ class Histogram:
         )
 
 
-def plot_histogram(histogram, ax=None, **plot_kwargs):
-    bin_centers = 0.5 * (histogram.bin_edges[1:] + histogram.bin_edges[:-1])
+def plot_histogram(histogram, ax=None, show_errorband=True, **plot_kwargs):
     bin_edges = histogram.bin_edges
 
     if ax is None:
@@ -107,6 +106,9 @@ def plot_histogram(histogram, ax=None, **plot_kwargs):
         where="post",
         **plot_kwargs
     )
+
+    if not show_errorband:
+        return
 
     color = step[0].get_color()
     ax.fill_between(
