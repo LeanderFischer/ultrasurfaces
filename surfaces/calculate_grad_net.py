@@ -5,6 +5,7 @@ Calculate both probabilities and gradients for a given set of systematic dataset
 from typing import List
 import pandas as pd
 import numpy as np
+import keras
 
 from sklearn import preprocessing
 from sklearn.compose import make_column_transformer
@@ -20,9 +21,12 @@ def run_grad_net(
     param_names: List[str],
     poly_order: int = 2,
     hidden_layer_sizes: tuple = (100, 100),
+    activation: str = "relu",
     # verbose can be "auto", 0, 1, or 2
     verbose: int = 0,
     epochs: int = 10,
+    shuffle: bool = True,
+    learning_rate: float = 1e-5,
 ):
     """
     Run the GradientNetwork on a set of nominal and systematic datasets.
@@ -41,10 +45,16 @@ def run_grad_net(
         A list of the parameters that we want to calculate gradients for.
     hidden_layer_sizes : tuple, optional
         The number of neurons in each hidden layer of the classifier (default is (100, 100)).
+    activation : str, optional
+        The activation function to use in the classifier (default is "relu").
     verbose : int, optional
         The verbosity level of the classifier (default is 0).
     epochs : int, optional
         The number of epochs to train the classifier for (default is 10).
+    shuffle : bool, optional
+        Whether to shuffle the data before each epoch (default is True).
+    learning_rate : float, optional
+        The learning rate to use in the classifier (default is 1e-5).
     """
     sys_names = [dataset.name for dataset in sys_datasets]
     for name in sys_names:
@@ -92,15 +102,15 @@ def run_grad_net(
     grad_net = GradientNetwork(
         hidden_layer_sizes=hidden_layer_sizes,
         delta_p=delta_p,
-        activations=["swish"] * len(hidden_layer_sizes),
+        activations=[activation] * len(hidden_layer_sizes),
         dropout_rates=[0.0] * len(hidden_layer_sizes),
     )
-    # Compile and fit the network
+    # Compile and fit the network using Adam with given learning rate
     grad_net.compile(
-        optimizer="adam",
+        optimizer=keras.optimizers.Adam(learning_rate=learning_rate),
         loss="categorical_crossentropy",
     )
-    grad_net.fit(X, y, epochs=epochs, batch_size=1000, verbose=verbose)
+    grad_net.fit(X, y, epochs=epochs, batch_size=1000, verbose=verbose, shuffle=shuffle)
 
     # create one column in the data frame for the probability of each set
     prob_cols = [f"prob_{set_label}" for set_label in label_encoder.classes_]
