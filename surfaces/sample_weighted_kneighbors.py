@@ -201,7 +201,8 @@ class SampleWeightedKNeighborsClassifier(
             weights *= self.sample_weights[neigh_ind]
 
         if correct_bias:
-            set_num_threads(self.n_jobs)
+            if self.n_jobs is not None:
+                set_num_threads(self.n_jobs)
             weights *= self.reweight_neighbours(
                 X,
                 self._fit_X,
@@ -257,7 +258,8 @@ class SampleWeightedKNeighborsClassifier(
             weights *= self.sample_weights[neigh_ind]
 
         if correct_bias:
-            set_num_threads(self.n_jobs)
+            if self.n_jobs is not None:
+                set_num_threads(self.n_jobs)
             weights *= self.reweight_neighbours(
                 X,
                 self._fit_X,
