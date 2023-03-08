@@ -126,6 +126,8 @@ def plot_histogram(histogram, ax=None, show_errorband=True, **plot_kwargs):
         color=color,
     )
 
+    return step
+
 
 if __name__ == "__main__":
     import numpy as np
