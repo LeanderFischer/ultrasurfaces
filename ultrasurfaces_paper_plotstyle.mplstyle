@@ -1,7 +1,7 @@
 # ultrasurfaces plot stylesheet for the paper.
 # Note that the recommended figure width for PRD publications is 3 3/8 in.
 
-figure.figsize: 3.375, 3.375   # Set figure width and height to 3 3/8 in
+figure.figsize: 3.375, 2.5   # Set figure width to 3 3/8 in
 figure.dpi: 100                # Set figure resolution to 100 dots per inch
 
 font.family: serif             # Use a serif font for text elements
