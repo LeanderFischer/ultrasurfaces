@@ -257,9 +257,9 @@ class Generator:
         smearing = self.__rng.normal(
             loc=response.mu, scale=response.sigma, size=self.__n_events
         )
-        log10_ereco = np.log10(self.__events["true_energy"]) * smearing
+        log_ereco = np.log(self.__events["true_energy"]) * smearing
 
-        self.__events["reco_energy"] = np.power(10, log10_ereco)
+        self.__events["reco_energy"] = np.exp(log_ereco)
 
         # actual weights are not changed
         self.__events["weights"] = np.copy(self.__events["weights_pre_detector"])
