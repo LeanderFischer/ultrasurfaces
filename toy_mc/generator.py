@@ -44,7 +44,8 @@ class Generator:
         response: Response,
         pars: OscPars = None,
         rng_seed: int = None,
-        name: str = None
+        name: str = None,
+        verbose: bool = False,
     ) -> None:
         """
         Toy MC generator, sampling events from a power law neutrino energy
@@ -67,8 +68,11 @@ class Generator:
             Name of this generator. This will be used to name the unique probability 
             columns that are added to DataFrames with events. Be sure to give one 
             unique name to each systematic set that is used.
+        verbose : bool
+            If True, print out information about the generated events
         """
 
+        self.verbose = verbose
         self.__rng = np.random.default_rng(rng_seed)
 
         # define sample boundaries
@@ -156,11 +160,12 @@ class Generator:
         czmin, czmax = self.__boundaries["cos(zen)"]
         cos_zens = self.__rng.uniform(low=czmin, high=czmax, size=n_events)
 
-        print(
-            f"Generating events with log10(E / GeV) from a Gaussian with "
-            f"mean {mean_loge} and wdith {width_loge} "
-            f"and cos(zenith) values uniformly sampled between {czmin} and {czmax}."
-        )
+        if self.verbose:
+            print(
+                f"Generating events with log10(E / GeV) from a Gaussian with "
+                f"mean {mean_loge} and wdith {width_loge} "
+                f"and cos(zenith) values uniformly sampled between {czmin} and {czmax}."
+            )
 
         # start with equal weights and without oscillation weight
         self.__events = {
