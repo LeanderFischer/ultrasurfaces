@@ -122,8 +122,9 @@ def plot_histogram(histogram, ax=None, show_errorband=True, **plot_kwargs):
             histogram.hist[-1] + histogram.hist_unc[-1],
         ),
         step="post",
-        alpha=0.2,
+        alpha=0.3,
         color=color,
+        edgecolor=None,
     )
 
     return step
