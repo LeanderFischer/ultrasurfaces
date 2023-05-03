@@ -9,5 +9,3 @@ black
 pandas
 uncertainties
 numba
-keras
-tensorflow
