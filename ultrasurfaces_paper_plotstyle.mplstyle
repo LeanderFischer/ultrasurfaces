@@ -1,0 +1,29 @@
+# ultrasurfaces plot stylesheet for the paper.
+# Note that the recommended figure width for PRD publications is 3 3/8 in.
+
+figure.figsize: 3.375, 2.5     # Set figure width to 3 3/8 in
+figure.dpi: 300                # Set figure resolution to 100 dots per inch
+
+font.family: serif             # Use a serif font for text elements
+font.size: 8                   # Set font size to 8 points
+
+lines.linewidth: 1.5           # Set line width to 1 point (minimum required is 0.5)
+lines.markersize: 2            # Set marker size to 1 mm diameter
+lines.markeredgewidth: 1.0     # Set marker edge width to 1 point (minimum required is 0.5)
+lines.markeredgecolor: black   # Set marker edge color to black
+
+axes.labelsize: 8              # Set label size to 8 points
+axes.linewidth: 1.5            # Set axis linewidth to 1 point (minimum required is 0.5)
+axes.titlesize: 8              # Set title size to 8 points
+axes.axisbelow: True
+
+legend.fontsize: 8             # Set legend font size to 8 points
+legend.frameon: False          # Remove legend frame
+legend.handletextpad: 0.5      # Add padding between legend handle and text
+legend.handlelength: 2         # Set legend handle length to 2 points
+legend.labelspacing: 0.5       # Set spacing between legend entries to 0.5 points
+
+# grid stuff
+axes.grid: True
+grid.color: .8
+grid.linestyle: -
