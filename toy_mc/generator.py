@@ -137,6 +137,13 @@ class Generator:
         self.__events["weights"] = (
             self.__response_reweight * self.__events["weights_pre_detector"]
         )
+    
+    def add_event_column(self, column_name, column_values):
+        """
+        Add a column to the events DataFrame. This can be used to add event-wise
+        gradients or other metadata to the events.
+        """
+        self.__events[column_name] = column_values
 
     def __generation(self, n_events: int) -> None:
         """
