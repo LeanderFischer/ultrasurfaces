@@ -80,25 +80,14 @@ def chi_square_at_response(
     """
     Calculate the chi square between the nominal
     and a given detector response."""
-    # generate new independent dataset at response with high statistics using new Generator
-    gen_response = generator.Generator(
-        n_events=int(response.mu * 1e6),
-        response=response,
-        pars=default_pars,
-        rng_seed=42
-    )
-    # divide by 10 because we have generated 10 times more events
-    hist_nominal = gen_response.get_histogram(bin_edges) / 10
-
-    hist_response = generate_histogram_at_response(
+    return chi_square_at_response_and_osc_eventwise(
         gen_nominal=gen_nominal,
         df=df,
         response=response,
+        osc_pars=default_pars,
         bin_edges=bin_edges,
-        use_systs=use_systs,
         variable=variable,
     )
-    return chi_square(hist_nominal, hist_response)
 
 
 def get_binwise_gradients(
