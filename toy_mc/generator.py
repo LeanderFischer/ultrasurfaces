@@ -99,7 +99,7 @@ class Generator:
         return self.__osc_pars
 
     @property
-    def events(self) -> dict:
+    def events(self) -> pd.DataFrame:
         return pd.DataFrame(self.__events)
 
     def get_histogram(self, bin_edges, variable="reco_energy") -> dict:
